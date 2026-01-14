@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار الإنجليزي الطبي المطور</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 0; line-height: 1.6; }
+        
+        .stats-bar { position: sticky; top: 0; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 12px 20px; display: flex; justify-content: space-around; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1000; flex-wrap: wrap; gap: 10px; }
+        .stat-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .stat-label { font-size: 0.75em; opacity: 0.8; }
+        .stat-value { font-size: 1.3em; font-weight: bold; }
+        .stat-correct { color: #2ecc71; }
+        .stat-wrong { color: #e74c3c; }
+        .stat-percentage { color: #3498db; }
+        .stat-total { color: #f39c12; }
+
+        .container { max-width: 900px; margin: 20px auto; padding: 0 20px 40px; }
+        header { background: white; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        header h1 { color: #2c3e50; font-size: 2em; margin-bottom: 10px; }
+        header p { color: #7f8c8d; font-size: 1.1em; }
+
+        .question-block { background: white; border-radius: 15px; padding: 25px; margin-bottom: 25px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); transition: transform 0.3s; }
+        .question-number { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 15px; border-radius: 20px; display: inline-block; font-weight: bold; margin-bottom: 15px; }
+        .question-text { color: #2c3e50; font-size: 1.2em; margin-bottom: 10px; font-weight: bold; }
+        .question-arabic { color: #5a6263; font-size: 1em; margin-bottom: 20px; padding: 10px; background: #f0f3f5; border-right: 4px solid #764ba2; border-radius: 4px; }
+        
+        .options { display: flex; flex-direction: column; gap: 12px; }
+        .option { padding: 15px 20px; border: 2px solid #ecf0f1; border-radius: 10px; cursor: pointer; transition: all 0.3s; background: #f8f9fa; display: flex; justify-content: space-between; align-items: center; }
+        .option:hover:not(.disabled) { border-color: #667eea; background: #f0f3ff; transform: translateX(-5px); }
+        .option-ar { font-size: 0.9em; color: #7f8c8d; }
+        
+        .correct { border-color: #2ecc71 !important; background: #d5f4e6 !important; font-weight: bold; }
+        .wrong { border-color: #e74c3c !important; background: #fadbd8 !important; }
+        .disabled { cursor: not-allowed; }
+
+        .explanation { margin-top: 15px; padding: 15px; background: #e8f4fd; border-radius: 10px; color: #2980b9; border-left: 5px solid #3498db; display: none; font-size: 0.95em; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        @media (max-width: 768px) {
+            .option { flex-direction: column; align-items: flex-start; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stats-bar">
+        <div class="stat-item"><span class="stat-label">✓ صح</span><span class="stat-value stat-correct" id="correctCount">0</span></div>
+        <div class="stat-item"><span class="stat-label">✗ غلط</span><span class="stat-value stat-wrong" id="wrongCount">0</span></div>
+        <div class="stat-item"><span class="stat-label">% النسبة</span><span class="stat-value stat-percentage" id="percentage">0%</span></div>
+        <div class="stat-item"><span class="stat-label">الإجمالي</span><span class="stat-value stat-total"><span id="answered">0</span>/50</span></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🎯 اختبار المصطلحات الطبية</h1>
+            <p>ترجمة الخيارات مع شرح تفصيلي لكل إجابة</p>
+        </header>
+        <div id="questionsContainer"></div>
+    </div>
+
+<script>
+const questions = [
+    { 
+        number: 1, question: "Anterior refers to:", arabic: "مصطلح anterior يشير إلى:", 
+        options: ["Back (الخلف)", "Front (الأمام)", "Side (الجانب)", "Middle (المنتصف)"], 
+        correct: 1, explanation: "Anterior يعني كل ما هو موجود في الجهة الأمامية من الجسم."
+    },
+    { 
+        number: 2, question: "Posterior means:", arabic: "مصطلح posterior يعني:", 
+        options: ["Toward the front (نحو الأمام)", "Toward the back (نحو الخلف)", "Toward the feet (نحو القدمين)", "Toward the midline (نحو خط المنتصف)"], 
+        correct: 1, explanation: "Posterior هو عكس Anterior ويشير إلى الجهة الخلفية أو الظهر."
+    },
+    { 
+        number: 3, question: "Superior means:", arabic: "Superior يعني:", 
+        options: ["Lower (أدنى)", "Toward the midline (نحو المنتصف)", "Above (أعلى)", "Deep (عميق)"], 
+        correct: 2, explanation: "Superior تشير إلى الجزء العلوي من الجسم أو باتجاه الرأس."
+    },
+    { 
+        number: 4, question: "Inferior means:", arabic: "Inferior يعني:", 
+        options: ["Below (أسفل)", "Toward the back (نحو الخلف)", "Above (أعلى)", "Superficial (سطحي)"], 
+        correct: 0, explanation: "Inferior تعني الجزء السفلي، عكس Superior."
+    },
+    { 
+        number: 5, question: "The term medial means:", arabic: "مصطلح medial يعني:", 
+        options: ["Near the midline (قريب من خط المنتصف)", "Near the surface (قريب من السطح)", "Far from midline (بعيد عن خط المنتصف)", "Above (أعلى)"], 
+        correct: 0, explanation: "Medial تستخدم لوصف الأجزاء القريبة من المحور أو الخط الوسطي للجسم."
+    },
+    { 
+        number: 6, question: "Lateral means:", arabic: "Lateral يعني:", 
+        options: ["Toward the middle (نحو المنتصف)", "Toward the side (نحو الجانب)", "Far from root (بعيد عن الأصل)", "Toward feet (نحو القدمين)"], 
+        correct: 1, explanation: "Lateral تعني بعيداً عن خط المنتصف، أي باتجاه الجوانب."
+    },
+    { 
+        number: 7, question: "Proximal means:", arabic: "Proximal يعني:", 
+        options: ["Near the root (قريب من منشأ الطرف)", "Toward head (نحو الرأس)", "Toward the feet (نحو القدمين)", "Toward trunk (نحو الجذع)"], 
+        correct: 0, explanation: "Proximal تعني الأقرب لنقطة اتصال الطرف بالجسم."
+    },
+    { 
+        number: 8, question: "Distal means:", arabic: "Distal يعني:", 
+        options: ["Toward head (نحو الرأس)", "Toward back (نحو الخلف)", "Away from root (بعيد عن منشأ الطرف)", "Toward the head (نحو الرأس)"], 
+        correct: 2, explanation: "Distal تعني الأبعد عن نقطة اتصال الطرف بالجسم (مثل الأصابع بالنسبة للكتف)."
+    },
+    { 
+        number: 9, question: "External means:", arabic: "External يعني:", 
+        options: ["Deep (عميق)", "Outside (خارجي)", "Middle (منتصف)", "Lower (أسفل)"], 
+        correct: 1, explanation: "External تشير إلى السطح الخارجي للعضو أو الجسم."
+    },
+    { 
+        number: 10, question: "Internal means:", arabic: "Internal يعني:", 
+        options: ["Outside (خارج)", "Surface (سطح)", "Above (أعلى)", "Inside (داخل)"], 
+        correct: 3, explanation: "Internal تشير إلى ما هو موجود بداخل العضو أو الجسم."
+    },
+    { 
+        number: 11, question: "Deep means:", arabic: "Deep يعني:", 
+        options: ["Toward surface (نحو السطح)", "Away from surface (بعيد عن السطح/عميق)", "Above (أعلى)", "Between (بين)"], 
+        correct: 1, explanation: "Deep تصف الأنسجة البعيدة عن سطح الجلد للداخل."
+    },
+    { 
+        number: 12, question: "The sagittal plane divides the body into:", arabic: "المستوى السهمي يقسم الجسم إلى:", 
+        options: ["Upper and lower (علوي وسفلي)", "Front and back (أمامي وخلفي)", "Right and left (يمين ويسار)", "Deep and superficial (عميق وسطحي)"], 
+        correct: 2, explanation: "Sagittal Plane هو المستوى الذي يقسم الجسم طولياً إلى جانبين يمين ويسار."
+    },
+    { 
+        number: 13, question: "The coronal plane divides the body into:", arabic: "المستوى الإكليلي يقسم الجسم إلى:", 
+        options: ["Right/left (يمين/يسار)", "Upper/lower (علوي/سفلي)", "Anterior/posterior (أمامي/خلفي)", "Internal/external (داخلي/خارجي)"], 
+        correct: 2, explanation: "Coronal (أو Frontal) يقسم الجسم إلى جزء أمامي وجزء خلفي."
+    },
+    { 
+        number: 14, question: "The transverse plane divides the body into:", arabic: "المستوى المستعرض يقسم الجسم إلى:", 
+        options: ["Superior/inferior (علوي/سفلي)", "Medial/lateral (إنسي/جانبي)", "Right/left (يمين/يسار)", "External/internal (خارجي/داخلي)"], 
+        correct: 0, explanation: "Transverse يقسم الجسم أفقياً إلى جزء علوي وجزء سفلي."
+    },
+    { 
+        number: 15, question: "The axial plane is also known as:", arabic: "المستوى المحوري يُعرف أيضاً بـ:", 
+        options: ["Transverse plane (المستعرض)", "Sagittal (السهمي)", "Coronal (الإكليلي)", "Median (الوسطي)"], 
+        correct: 0, explanation: "Axial Plane هو اسم آخر للـ Transverse Plane المستخدم بكثرة في الأشعة المقطعية."
+    },
+    { 
+        number: 16, question: "The root in hepatitis is:", arabic: "الجذر في كلمة hepatitis هو:", 
+        options: ["itis (التهاب)", "hepat (كبد)", "heap (كومة)", "hepta (سبعة)"], 
+        correct: 1, explanation: "Hepat- هو الجذر اللاتيني الذي يعني الكبد."
+    },
+    { 
+        number: 17, question: "The suffix -itis means:", arabic: "اللاحقة -itis تعني:", 
+        options: ["Pain (ألم)", "Tumor (ورم)", "Inflammation (التهاب)", "Removal (إزالة)"], 
+        correct: 2, explanation: "أينما وجدت -itis فهي تعني وجود التهاب في هذا العضو."
+    },
+    { 
+        number: 18, question: "The suffix -ectomy means:", arabic: "اللاحقة -ectomy تعني:", 
+        options: ["Surgical removal (استئصال جراحي)", "Enlargement (تضخم)", "Hardening (تصلب)", "Vision (رؤية)"], 
+        correct: 0, explanation: "Ectomy تعني قص أو استئصال عضو جراحياً مثل Appendectomy (استئصال الزائدة)."
+    },
+    { 
+        number: 19, question: "The suffix -oma means:", arabic: "اللاحقة -oma تعني:", 
+        options: ["Pain (ألم)", "Tumor (ورم)", "Disease (مرض)", "Cell (خلية)"], 
+        correct: 1, explanation: "Oma تشير عادة إلى ورم أو كتلة."
+    },
+    { 
+        number: 20, question: "The suffix -algia means:", arabic: "اللاحقة -algia تعني:", 
+        options: ["Pain (ألم)", "Inflammation (التهاب)", "Tumor (ورم)", "Pus (صديد)"], 
+        correct: 0, explanation: "Algia تعني الشعور بالألم، مثل Neuralgia (ألم الأعصاب)."
+    },
+    { 
+        number: 21, question: "The suffix -megaly means:", arabic: "اللاحقة -megaly تعني:", 
+        options: ["Hardening (تصلب)", "Enlargement (تضخم)", "Breakdown (تحلل)", "Excess (زيادة)"], 
+        correct: 1, explanation: "Megaly تعني كبر حجم العضو بشكل غير طبيعي."
+    },
+    { 
+        number: 22, question: "The suffix -logy means:", arabic: "اللاحقة -logy تعني:", 
+        options: ["Study of (علم/دراسة)", "Pain (ألم)", "Tumor (ورم)", "Vision (رؤية)"], 
+        correct: 0, explanation: "Logy تعني علم دراسة تخصص معين."
+    },
+    { 
+        number: 23, question: "The suffix -derma refers to:", arabic: "اللاحقة -derma تشير إلى:", 
+        options: ["Lung (رئة)", "Brain (دماغ)", "Skin (جلد)", "Kidney (كلية)"], 
+        correct: 2, explanation: "Derma هو المصطلح الطبي للجلد."
+    },
+    { 
+        number: 24, question: "The root cardio refers to the:", arabic: "الجذر cardio يشير إلى:", 
+        options: ["Liver (كبد)", "Heart (قلب)", "Brain (دماغ)", "Stomach (معدة)"], 
+        correct: 1, explanation: "Cardio هو الجذر الذي يعني القلب."
+    },
+    { 
+        number: 25, question: "The root gastro refers to the:", arabic: "الجذر gastro يشير إلى:", 
+        options: ["Liver (كبد)", "Intestine (أمعاء)", "Stomach (معدة)", "Heart (قلب)"], 
+        correct: 2, explanation: "Gastro تشير إلى المعدة والجهاز الهضمي."
+    },
+    { 
+        number: 26, question: "The suffix -pathy means:", arabic: "اللاحقة -pathy تعني:", 
+        options: ["Disease (مرض)", "Vision (رؤية)", "Enlargement (تضخم)", "Hardening (تصلب)"], 
+        correct: 0, explanation: "Pathy تشير إلى وجود حالة مرضية في العضو."
+    },
+    { 
+        number: 27, question: "The prefix hyper- means:", arabic: "البادئة hyper- تعني:", 
+        options: ["Low (منخفض)", "Excessive (مفرط/عالي)", "Same (نفس)", "Few (قليل)"], 
+        correct: 1, explanation: "Hyper- تعني زيادة فوق المعدل الطبيعي."
+    },
+    { 
+        number: 28, question: "The prefix hypo- means:", arabic: "البادئة hypo- تعني:", 
+        options: ["Excess (زيادة)", "Low/Under (منخفض/تحت)", "Before (قبل)", "Around (حول)"], 
+        correct: 1, explanation: "Hypo- تعني نقص أو انخفاض تحت المعدل الطبيعي."
+    },
+    { 
+        number: 29, question: "The prefix pre- means:", arabic: "البادئة pre- تعني:", 
+        options: ["After (بعد)", "Before (قبل)", "Against (ضد)", "Around (حول)"], 
+        correct: 1, explanation: "Pre- تستخدم للدلالة على زمن أو مكان يسبق الشيء."
+    },
+    { 
+        number: 30, question: "The prefix post- means:", arabic: "البادئة post- تعني:", 
+        options: ["Before (قبل)", "Against (ضد)", "After (بعد)", "Across (عبر)"], 
+        correct: 2, explanation: "Post- تعني بعد، مثل Post-operative (بعد العملية)."
+    },
+    { 
+        number: 31, question: "The prefix anti- means:", arabic: "البادئة anti- تعني:", 
+        options: ["Before (قبل)", "Against (ضد)", "After (بعد)", "Within (داخل)"], 
+        correct: 1, explanation: "Anti- تعني مضاد لشيء معين مثل Antibiotic (مضاد حيوي)."
+    },
+    { 
+        number: 32, question: "The prefix brady- means:", arabic: "البادئة brady- تعني:", 
+        options: ["Fast (سريع)", "Slow (بطيء)", "Large (ضخم)", "Strong (قوي)"], 
+        correct: 1, explanation: "Brady- تعني البطء، مثل Bradycardia (بطء ضربات القلب)."
+    },
+    { 
+        number: 33, question: "The prefix tachy- means:", arabic: "البادئة tachy- تعني:", 
+        options: ["Fast (سريع)", "Slow (بطيء)", "Weak (ضعيف)", "Diffuse (منتشر)"], 
+        correct: 0, explanation: "Tachy- تعني السرعة، مثل Tachycardia (سرعة ضربات القلب)."
+    },
+    { 
+        number: 34, question: "The prefix poly- means:", arabic: "البادئة poly- تعني:", 
+        options: ["Few (قليل)", "Many (كثير/متعدد)", "Large (كبير)", "Small (صغير)"], 
+        correct: 1, explanation: "Poly- تعني التعدد أو الكثرة."
+    },
+    { 
+        number: 35, question: "The prefix mono- means:", arabic: "البادئة mono- تعني:", 
+        options: ["Two (اثنين)", "One (واحد)", "Many (كثير)", "Small (صغير)"], 
+        correct: 1, explanation: "Mono- تعني مفرد أو رقم واحد."
+    },
+    { 
+        number: 36, question: "The prefix inter- means:", arabic: "البادئة inter- تعني:", 
+        options: ["Between (بين)", "Below (أسفل)", "Within (داخل)", "Above (أعلى)"], 
+        correct: 0, explanation: "Inter- تعني المسافة أو الموقع الموجود بين شيئين."
+    },
+    { 
+        number: 37, question: "The prefix intra- means:", arabic: "البادئة intra- تعني:", 
+        options: ["Between (بين)", "Inside/Within (داخل)", "Outside (خارج)", "Above (أعلى)"], 
+        correct: 1, explanation: "Intra- تعني في الداخل، مثل Intravenous (داخل الوريد)."
+    },
+    { 
+        number: 38, question: "The prefix peri- means:", arabic: "البادئة peri- تعني:", 
+        options: ["Before (قبل)", "Around (حول)", "Within (داخل)", "Above (أعلى)"], 
+        correct: 1, explanation: "Peri- تعني المحيط أو ما حول العضو."
+    },
+    { 
+        number: 39, question: "The prefix sub- means:", arabic: "البادئة sub- تعني:", 
+        options: ["Above (أعلى)", "Below/Under (أسفل/تحت)", "Between (بين)", "Within (داخل)"], 
+        correct: 1, explanation: "Sub- تعني تحت الطبقة أو أسفل العضو."
+    },
+    { 
+        number: 40, question: "Hepatomegaly means enlargement of the:", arabic: "Hepatomegaly تعني تضخم:", 
+        options: ["Heart (القلب)", "Kidney (الكلية)", "Liver (الكبد)", "Lung (الرئة)"], 
+        correct: 2, explanation: "Hepat = كبد، Megaly = تضخم، إذاً المصطلح يعني تضخم الكبد."
+    },
+    { 
+        number: 41, question: "Nephritis is inflammation of the:", arabic: "Nephritis هو التهاب:", 
+        options: ["Liver (الكبد)", "Kidney (الكلية)", "Heart (القلب)", "Lung (الرئة)"], 
+        correct: 1, explanation: "Nephr = كلية، itis = التهاب."
+    },
+    { 
+        number: 42, question: "Dermatitis means inflammation of the:", arabic: "Dermatitis يعني التهاب:", 
+        options: ["Brain (الدماغ)", "Skin (الجلد)", "Lung (الرئة)", "Muscle (العضلة)"], 
+        correct: 1, explanation: "Dermat = جلد، itis = التهاب."
+    },
+    { 
+        number: 43, question: "Arthritis refers to inflammation of the:", arabic: "Arthritis يشير إلى التهاب:", 
+        options: ["Bone (العظم)", "Joint (المفصل)", "Liver (الكبد)", "Kidney (الكلية)"], 
+        correct: 1, explanation: "Arthr = مفصل، itis = التهاب."
+    },
+    { 
+        number: 44, question: "The term tachypnea means:", arabic: "مصطلح tachypnea يعني:", 
+        options: ["Slow breathing (تنفس بطيء)", "Fast breathing (تنفس سريع)", "No breathing (توقف التنفس)", "Painful breathing (تنفس مؤلم)"], 
+        correct: 1, explanation: "Tachy = سريع، pnea = تنفس."
+    },
+    { 
+        number: 45, question: "The term bradypnea means:", arabic: "مصطلح bradypnea يعني:", 
+        options: ["Fast breathing (سريع)", "No breathing (توقف)", "Slow breathing (بطيء)", "Deep breathing (عميق)"], 
+        correct: 2, explanation: "Brady = بطيء، pnea = تنفس."
+    },
+    { 
+        number: 46, question: "Hematology is the study of:", arabic: "Hematology هو دراسة:", 
+        options: ["Heart (القلب)", "Blood (الدم)", "Liver (الكبد)", "Skin (الجلد)"], 
+        correct: 1, explanation: "Hemat = دم، logy = علم أو دراسة."
+    },
+    { 
+        number: 47, question: "The term osteocyte refers to a cell of the:", arabic: "مصطلح osteocyte يشير إلى خلية:", 
+        options: ["Muscle (عضلة)", "Bone (عظم)", "Brain (دماغ)", "Skin (جلد)"], 
+        correct: 1, explanation: "Osteo = عظم، cyte = خلية."
+    },
+    { 
+        number: 48, question: "Leukocyte refers to a:", arabic: "Leukocyte يشير إلى:", 
+        options: ["Red blood cell (خلية حمراء)", "Platelet (صفيحة)", "White blood cell (خلية بيضاء)", "Liver cell (خلية كبد)"], 
+        correct: 2, explanation: "Leuko = أبيض، cyte = خلية."
+    },
+    { 
+        number: 49, question: "The combining form cyto- means:", arabic: "الصيغة المركبة cyto- تعني:", 
+        options: ["Cell (خلية)", "Bone (عظم)", "Tissue (نسيج)", "Liver (كبد)"], 
+        correct: 0, explanation: "Cyto- هو المصطلح الطبي الذي يشير إلى الخلية."
+    },
+    { 
+        number: 50, question: "The root neuro- means:", arabic: "الجذر neuro- يعني:", 
+        options: ["Nerve (عصب)", "Muscle (عضلة)", "Liver (كبد)", "Kidney (كلية)"], 
+        correct: 0, explanation: "Neuro- هو الجذر الطبي الخاص بالأعصاب والجهاز العصبي."
+    }
+];
+
+let stats = { correct: 0, wrong: 0, answered: 0 };
+
+function updateStats() {
+    document.getElementById('correctCount').textContent = stats.correct;
+    document.getElementById('wrongCount').textContent = stats.wrong;
+    document.getElementById('answered').textContent = stats.answered;
+    const percentage = stats.answered > 0 ? Math.round((stats.correct / stats.answered) * 100) : 0;
+    document.getElementById('percentage').textContent = percentage + '%';
+}
+
+function createQuestionBlock(q) {
+    const block = document.createElement('div');
+    block.className = 'question-block';
+    block.id = `question-${q.number}`;
+
+    let optionsHTML = '';
+    q.options.forEach((option, index) => {
+        optionsHTML += `
+            <div class="option" data-index="${index}" onclick="selectAnswer(${q.number}, ${index}, ${q.correct})">
+                <span>${String.fromCharCode(65 + index)}. ${option}</span>
+            </div>
+        `;
+    });
+
+    block.innerHTML = `
+        <div class="question-number">السؤال ${q.number}</div>
+        <div class="question-text">${q.question}</div>
+        <div class="question-arabic">${q.arabic}</div>
+        <div class="options" id="options-${q.number}">
+            ${optionsHTML}
+        </div>
+        <div class="explanation" id="explanation-${q.number}">
+            <strong>💡 الشرح:</strong> ${q.explanation}
+        </div>
+    `;
+    return block;
+}
+
+function selectAnswer(questionNum, selectedIndex, correctIndex) {
+    const optionsContainer = document.getElementById(`options-${questionNum}`);
+    const options = optionsContainer.querySelectorAll('.option');
+    const explanation = document.getElementById(`explanation-${questionNum}`);
+
+    if (options[0].classList.contains('disabled')) return;
+
+    stats.answered++;
+    if (selectedIndex === correctIndex) {
+        stats.correct++;
+    } else {
+        stats.wrong++;
+    }
+    updateStats();
+
+    options.forEach((option, index) => {
+        option.classList.add('disabled');
+        if (index === correctIndex) {
+            option.classList.add('correct');
+        } else if (index === selectedIndex) {
+            option.classList.add('wrong');
+        }
+    });
+
+    explanation.style.display = 'block';
+}
+
+const container = document.getElementById('questionsContainer');
+questions.forEach(q => {
+    container.appendChild(createQuestionBlock(q));
+});
+
+updateStats();
+</script>
+
+</body>
+</html>
